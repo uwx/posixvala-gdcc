@@ -20,52 +20,57 @@ G_BEGIN_DECLS
 #include <stdlib.h>
 #include <stdint.h>
 
+#ifndef ZD_PRINT_FUNCTION
+#define ZD_PRINT_FUNCTION fprintf
+#endif
+
 #define G_LIKELY(expr) (expr)
 #define G_UNLIKELY(expr) (expr)
 #define G_LOG_DOMAIN "ERROR"
 #define G_STRFUNC __func__
-#define g_assertion_message_expr(domain,file,line,func,expr)		\
-do {									\
-	if (!expr) {							\
-		fprintf(stderr, "**\n%s:%s:%d:%s: %s\n",		\
-			domain, file, line, func,			\
-			"code should not be reached");			\
-	} else {							\
-		fprintf(stderr, "**\n%s:%s:%d:%s: "			\
-				"assertion failed: (%s)\n",		\
-				domain, file, line, func, expr);	\
-	}								\
-	abort();							\
-} while (0)
+#define g_assertion_message_expr(domain,file,line,func,expr) \
+do {									                     \
+	if (!expr) {							                 \
+		ZD_PRINT_FUNCTION(stderr, "**\n%s:%s:%d:%s: %s\n",	 \
+			domain, file, line, func,			             \
+			"code should not be reached");			         \
+	} else {							                     \
+		ZD_PRINT_FUNCTION(stderr, "**\n%s:%s:%d:%s: "		 \
+				"assertion failed: (%s)\n",		             \
+				domain, file, line, func, expr);	         \
+	}								                         \
+	abort();							                     \
+} while (0);
 
-#define GTypeInterface void*
-#define GQuark uintptr_t
+typedef void* GTypeInterface;
+typedef uintptr_t GQuark;
 #define g_quark_from_static_string(x) ((GQuark)(size_t)(x))
-#define gfloat float
-#define gdouble double
-#define gchar char
-#define uchar unsigned char
-#define ushort unsigned short
-#define gushort unsigned short
-#define ulong unsigned long
-#define gulong unsigned long
-#define gpointer void*
-#define gboolean int
-#define gint8 char
-#define guint8 unsigned char
-#define gint int
-#define gint16 short
-#define guint16 unsigned short
-#define guint unsigned int
-#define gint32 int
-#define guint32 unsigned int
-#define gint64 long long
-#define guint64 unsigned long long
-#define gunichar guint32
-#define glong long
-#define gdouble double
-#define gsize size_t
-#define gssize ssize_t
+typedef float gfloat;
+typedef double gdouble;
+typedef char gchar;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned short gushort;
+typedef unsigned long ulong;
+typedef unsigned long gulong;
+typedef void* gpointer;
+typedef const void* gconstpointer; // is a pointer to constant void
+typedef void const* gpointerconst; // is a constant pointer to void
+typedef int gboolean;
+typedef char gint8;
+typedef unsigned char guint8;
+typedef int gint;
+typedef short gint16;
+typedef unsigned short guint16;
+typedef unsigned int guint;
+typedef int gint32;
+typedef unsigned int guint32;
+typedef long long gint64;
+typedef unsigned long long guint64;
+typedef guint32 gunichar;
+typedef long glong;
+typedef size_t gsize;
+typedef ssize_t gssize;
 #define g_new0(x,y) (x*)calloc (y, sizeof(x));
 #define g_slice_new0(x) (x*)calloc (1, sizeof(x));
 #define g_return_if_fail(x) if(!(x)) return;
@@ -78,7 +83,7 @@ do {									\
 #define TRUE 1
 #define FALSE 0
 #define G_GNUC_CONST
-#define GType int
+typedef int GType;
 
 #define g_print printf
 #define g_strdup strdup
@@ -91,16 +96,32 @@ typedef struct {
 
 #define g_once_init_enter(x) ((*(x) == 0) ? TRUE : FALSE)
 #define g_once_init_leave(x,y) (*(x) = y)
-#define g_boxed_type_register_static(x, y, z) g_str_hash(x)
 
 static inline void g_type_init() {}
 static inline void g_boxed() {}
+//typedef gpointer (*GBoxedCopyFunc)(const gpointer s);
 typedef gpointer (*GBoxedCopyFunc)(gpointer s);
 typedef void (*GBoxedFreeFunc)(gpointer s);
 typedef void (*GFunc)(gpointer data, gpointer user_data);
 typedef void (*GDestroyNotify)(gpointer data);
 
+#ifdef __GDCC__
+static inline guint g_str_hash(const gpointer v); // fwd declaration for glib-string
+
+// gdcc wants strings to be 'char const*' not 'const char*'
+static inline guint g_boxed_type_register_static(gpointerconst v, const GBoxedCopyFunc dup, const GBoxedFreeFunc free) {
+    return g_str_hash((const gpointer) v);
+}
+#else
+#define g_boxed_type_register_static(x, y, z) g_str_hash(x)
+#endif
+
 #define GLIB_CHECK_VERSION(m,n,o) TRUE
+
+#include "_glib-gdcc.h"
+
+#include "_glib-defs.h"
+#include "_glib-floats.h"
 
 #include "glib-string.h"
 #include "glib-list.h"
